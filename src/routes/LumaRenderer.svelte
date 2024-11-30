@@ -1,111 +1,115 @@
 <script lang="ts">
-    interface Props{
-        width:string;
-        height:string;
-        backgroundColor?: string;
-        grid?: string;
-        gridColor?: string; 
-    }
+import { viewport } from './shared.svelte.js';
+import LumaNode from './LumaNode.svelte';
 
-let {width='1920', height='1080', backgroundColor='white', grid='true', gridColor='lightgrey'}:Props = $props();
+interface Props{
+    width:string;
+    height:string;
+    backgroundColor?: string;
+    grid?: boolean;
+    gridColor?: string; 
+}
 
+let {width='1920', height='1080', backgroundColor='white', grid=true, gridColor='lightgrey'}:Props = $props();
 
-let offsetX:number = $state(1);
-let offsetY:number = $state(0);
-
-let scale:number = $state(5);
 
 let dragging:boolean = false;
-let mouseClickX:number = 0;
-let mouseClickY:number = 0;
-
 
 let zoomMax:number = 15;
-let zoomMin:number = 2;
+let zoomMin:number = 1;
 
 let mouseX:number = $state(0);
 let mouseY:number = $state(0);
+let prevMouseX:number = 0;
+let prevMouseY:number = 0;
 
+let cursorType:string = $state('pointer');
 
-// TODO: this only works if the rernderer is centered on the page
-let middleX:number = window.screen.width / 2;
-let middleY:number = window.screen.height / 2;
+let renderer: HTMLElement;
 
-const startDrag = (e:MouseEvent) => {
+const startViewportDrag = () => { 
     dragging = true;
-    mouseClickX = e.pageX;
-    mouseClickY = e.pageY;
+    cursorType = 'grabbing';
+    prevMouseX = mouseX;
+    prevMouseY = mouseY;
 }
-const drag = () => {
-    if(dragging){        
-        offsetX += mouseX - mouseClickX;
-        mouseClickX = mouseX;
-        offsetY += mouseY - mouseClickY;
-        mouseClickY = mouseY;
-    } 
+const dragViewport = () => {
+    viewport.offsetX += (mouseX - prevMouseX) / viewport.scale;
+    viewport.offsetY += (mouseY - prevMouseY) / viewport.scale;
+
+    prevMouseX = mouseX;
+    prevMouseY = mouseY;
 }
-const endDrag = () => {
+const endViewportDrag = () => {
     dragging = false;
+    cursorType = 'default';
 }
+
+
 const handleWheel = (e:WheelEvent) => {
     e.preventDefault();
-
-    if(scale === zoomMin && e.deltaY > 0) return;
-    if(scale === zoomMax && e.deltaY < 0) return;
-
-    //move to mouse cursor if zooming in
-    if(e.deltaY < 0){
-        // if(e.pageX > middleX){
-        //     offsetX -= e.pageX - middleX;
-        // }
-        // else{
-        //     offsetX += middleX - e.pageX;
-        // }
-    }
-
-    if(e.deltaY < 0){
-        //scroll up
-        scale += 1;
-    } 
-    else{
-        //scroll down
-        scale -= 1;
-    }
+    viewportZoom(e);
 }
-const resetView = () => {
-    offsetX = 0;
-    offsetY = 0;
-    scale = 10;
-}
-const updateMousePos = (e:MouseEvent) => {
-    mouseX = e.pageX;
-    mouseY = e.pageY;
+const viewportZoom = (e:WheelEvent) => {
+    //prevent zooming beyond min/max limits
+    if(viewport.scale === zoomMin && e.deltaY > 0) return;
+    if(viewport.scale === zoomMax && e.deltaY < 0) return;
 
-    if(dragging) drag();
+    //determine zoom direction
+    const zoomDirection:number = e.deltaY < 0 ? 1 : -1;
+    const newScale:number = viewport.scale + zoomDirection;
+
+    //change offset so the zoom stays centered on middle of screen and moves toward the mouse on zoomin
+    let prevWidth:number = renderer.offsetWidth / viewport.scale;
+    let newWidth:number = renderer.offsetWidth / newScale;
+    let prevHeight:number = renderer.offsetHeight / viewport.scale;
+    let newHeight:number = renderer.offsetHeight / newScale;
+
+    let mouseWidth:number = zoomDirection === 1 ? mouseX / newScale : 0;
+    let mouseHeight:number = zoomDirection === 1 ? mouseY / newScale : 0;
+
+    viewport.offsetX -= ((prevWidth - newWidth) / 2) + mouseWidth;
+    viewport.offsetY -= ((prevHeight - newHeight) / 2) + mouseHeight;
+    viewport.scale = newScale;
 }
 
-//node testing
-let posX:number = $state(250);
-let posY:number = $state(0);
-let nodeWidth:number = $state(250);
-let nodeHeight:number = $state(250);
-let nodeFontSize:number = $state(24);
+const resetViewport = () => {
+    viewport.offsetX = 0;
+    viewport.offsetY = 0;
+    viewport.scale = 3;
+}
+
+const handleMouseButtonDown = (e: MouseEvent) => {
+    e.preventDefault();
+    if(e.button ===  1) startViewportDrag();
+}
+const handleMouse = (e:MouseEvent) => {
+    //origin (0,0) is at the center of the renderer
+    mouseX = e.clientX - renderer.getBoundingClientRect().left - renderer.clientWidth / 2;
+    mouseY = e.clientY - renderer.getBoundingClientRect().top - renderer.clientHeight / 2;
+    if(dragging) dragViewport();
+}
+const handleMouseButtonUp = (e: MouseEvent) => {
+    e.preventDefault();
+    if(e.button === 1) endViewportDrag();
+}
 
 </script>
 
 <!-- svelte-ignore  -->
-<div role='button' tabindex="0" onmouseleave={endDrag} onwheel={handleWheel} onmousemove={updateMousePos} onmousedown={startDrag} onmouseup={endDrag} id='luma-renderer' style:width={width} style:height={height}>
-    <div id='luma-background' style='--offsetX: {offsetX}px; --offsetY: {offsetY}px; --scale: {scale * 10}px; --bg-color:{backgroundColor}; --grid-color:{gridColor}' style:background-color={backgroundColor} class={grid === 'true' ? 'grid' : ''}></div>
-    <div id='luma-node' style='--posX: {posX + offsetX}px; --posY: {posY + offsetY}px; --nodeWidth: {nodeWidth * scale / 10}px; --nodeHeight: {nodeHeight * scale / 10}px; --nodeFontSize: {nodeFontSize * scale / 10}px'>I am a node</div>
-    <div id='luma-node' style='--posX: {posX + offsetX + 200}px; --posY: {posY + offsetY}px; --nodeWidth: {nodeWidth * scale / 10}px; --nodeHeight: {nodeHeight * scale / 10}px; --nodeFontSize: {nodeFontSize * scale / 10}px'>I am a node</div>
-
-    <button aria-label="reset the renderer view to origin (0,0)" id='luma-reset-view' onmousedown={resetView}>Reset</button>
+<div bind:this={renderer} role='button' style:cursor={cursorType} tabindex="0" onmousedown={handleMouseButtonDown} onmouseup={handleMouseButtonUp} onmouseleave={endViewportDrag} onwheel={handleWheel} onmousemove={handleMouse} id='luma-renderer' style:width={width} style:height={height}>
+    <div id='luma-background'
+         style='--offsetX: {viewport.offsetX * viewport.scale}px; --offsetY: {viewport.offsetY * viewport.scale}px; --scale: {viewport.scale * 10}px; --bg-color:{backgroundColor}; --grid-color:{gridColor}' 
+         style:background-color={backgroundColor} 
+         class={grid ? 'grid' : ''}>
+    </div>
+    <LumaNode posX={500} posY={10} nodeWidth={100} nodeHeight={100} nodeFontSize={12}/>
+    <LumaNode posX={300} posY={10} nodeWidth={100} nodeHeight={100} nodeFontSize={12}/>
+    <button aria-label="reset the renderer view to origin (0,0)" id='luma-reset-view' onmousedown={resetViewport}>Reset</button>
     <div id='luma-debug'>
-        <p>x position: {-offsetX}</p>
-        <p>y position: {offsetY}</p>
-        <p>scale: {scale}</p>
-        <p>middleX: {middleX}</p>
-        <p>middleY: {middleY}</p>
+        <p>x position: {-viewport.offsetX}</p>
+        <p>y position: {viewport.offsetY}</p>
+        <p>scale: {viewport.scale}</p>
         <p>mouseX: {mouseX}</p>
         <p>mouseY: {mouseY}</p>
     </div>
@@ -114,6 +118,7 @@ let nodeFontSize:number = $state(24);
 <style>
     #luma-renderer{
         position:relative;
+        overflow: hidden;
         margin:0px;
         padding:0px;
     }
@@ -125,13 +130,6 @@ let nodeFontSize:number = $state(24);
         top: 0;
         left: 0;
     }
-    #luma-background:hover{
-        cursor: grab;
-    }
-    #luma-background:active{
-        cursor: grabbing;
-    }
-
     #luma-reset-view{
         position: absolute;
         width: 100px;
@@ -146,28 +144,10 @@ let nodeFontSize:number = $state(24);
         left: 20px;
         top: 0;
     }
-    
     .grid{
         background-size: var(--scale) var(--scale);
         background-position: var(--offsetX) var(--offsetY);
         background-image: linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
-        linear-gradient(to top, var(--grid-color) 1px, transparent 1px);
-    }
-    #luma-node{
-        font-size: var(--nodeFontSize);
-        position: absolute;
-        top: var(--posY);
-        left: var(--posX);
-        width: var(--nodeWidth);
-        height: var(--nodeHeight);
-        background-color: white;
-        border: 1px solid black;
-        color: black;
-    }
-    #luma-node:hover{
-        border: 2px dashed black;
-    }
-    #luma-node:active{
-        border: 2px solid black;
+        linear-gradient(to top, var(--grid-color) 1px, transparent 1px)
     }
 </style>
