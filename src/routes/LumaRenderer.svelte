@@ -23,7 +23,15 @@ let mouseY:number = $state(0);
 let prevMouseX:number = 0;
 let prevMouseY:number = 0;
 
-let cursorType:string = $state('pointer');
+let cursorType:string = $state('default');
+
+let startSelectX = $state(0);
+let startSelectY = $state(0);
+let selectX = $state(0);
+let selectY = $state(0);
+let selectWidth = $state(0);
+let selectHeight = $state(0);
+let selecting = $state(false);
 
 let renderer: HTMLElement;
 
@@ -43,12 +51,6 @@ const dragViewport = () => {
 const endViewportDrag = () => {
     dragging = false;
     cursorType = 'default';
-}
-
-
-const handleWheel = (e:WheelEvent) => {
-    e.preventDefault();
-    viewportZoom(e);
 }
 const viewportZoom = (e:WheelEvent) => {
     //prevent zooming beyond min/max limits
@@ -72,39 +74,66 @@ const viewportZoom = (e:WheelEvent) => {
     viewport.offsetY -= ((prevHeight - newHeight) / 2) + mouseHeight;
     viewport.scale = newScale;
 }
+const startSelect = (e:MouseEvent) => {
+    selecting = true;
+    startSelectX = e.clientX;
+    startSelectY = e.clientY;
+}
+const updateSelect = (e:MouseEvent) => {
+    //if user clicks and selects to the left move visual starts
+    selectX = e.clientX < startSelectX ? e.clientX : startSelectX;
+    selectY = e.clientY < startSelectY ? e.clientY : startSelectY;
 
+    selectWidth = Math.abs(startSelectX - e.clientX);
+    selectHeight = Math.abs(startSelectY - e.clientY);
+}
+const endSelect = () => {
+    selectWidth = 0;
+    selectHeight = 0;   
+    selecting = false;
+}
+
+
+// high level functionality
 const resetViewport = () => {
     viewport.offsetX = 0;
     viewport.offsetY = 0;
     viewport.scale = 3;
 }
-
+const handleWheel = (e:WheelEvent) => {
+    e.preventDefault();
+    viewportZoom(e);
+}
 const handleMouseButtonDown = (e: MouseEvent) => {
     e.preventDefault();
-    if(e.button ===  1) startViewportDrag();
+    if(e.button === 1) startViewportDrag();
+    if(e.button === 0) startSelect(e);
 }
 const handleMouse = (e:MouseEvent) => {
     //origin (0,0) is at the center of the renderer
     mouseX = e.clientX - renderer.getBoundingClientRect().left - renderer.clientWidth / 2;
     mouseY = e.clientY - renderer.getBoundingClientRect().top - renderer.clientHeight / 2;
+
     if(dragging) dragViewport();
+    if(selecting) updateSelect(e);
 }
 const handleMouseButtonUp = (e: MouseEvent) => {
     e.preventDefault();
     if(e.button === 1) endViewportDrag();
+    if(e.button === 0) endSelect();
 }
 
 </script>
 
-<!-- svelte-ignore  -->
 <div bind:this={renderer} role='button' style:cursor={cursorType} tabindex="0" onmousedown={handleMouseButtonDown} onmouseup={handleMouseButtonUp} onmouseleave={endViewportDrag} onwheel={handleWheel} onmousemove={handleMouse} id='luma-renderer' style:width={width} style:height={height}>
     <div id='luma-background'
          style='--offsetX: {viewport.offsetX * viewport.scale}px; --offsetY: {viewport.offsetY * viewport.scale}px; --scale: {viewport.scale * 10}px; --bg-color:{backgroundColor}; --grid-color:{gridColor}' 
          style:background-color={backgroundColor} 
          class={grid ? 'grid' : ''}>
     </div>
-    <LumaNode posX={500} posY={10} nodeWidth={100} nodeHeight={100} nodeFontSize={12}/>
-    <LumaNode posX={300} posY={10} nodeWidth={100} nodeHeight={100} nodeFontSize={12}/>
+    <div style='--selectX: {selectX}px; --selectY: {selectY}px; --selectWidth: {selectWidth}px; --selectHeight: {selectHeight}px' id='luma-select'></div>
+    <LumaNode selected={false} posX={500} posY={10} nodeWidth={100} nodeHeight={100} nodeFontSize={12}/>
+    <LumaNode selected={false} posX={300} posY={10} nodeWidth={100} nodeHeight={100} nodeFontSize={12}/>
     <button aria-label="reset the renderer view to origin (0,0)" id='luma-reset-view' onmousedown={resetViewport}>Reset</button>
     <div id='luma-debug'>
         <p>x position: {-viewport.offsetX}</p>
@@ -112,10 +141,22 @@ const handleMouseButtonUp = (e: MouseEvent) => {
         <p>scale: {viewport.scale}</p>
         <p>mouseX: {mouseX}</p>
         <p>mouseY: {mouseY}</p>
+        <p>selecting: {selecting}</p>
     </div>
 </div>
 
 <style>
+    #luma-select{
+        position: absolute;
+        background-color: hsla(0, 0%, 50%, 0.1);
+        border-radius: 5px;
+        border: 1px solid hsla(0, 0%, 50%, 0.6);
+        width: var(--selectWidth);
+        height: var(--selectHeight);
+        top: var(--selectY);
+        left: var(--selectX);
+        z-index: 999;
+    }
     #luma-renderer{
         position:relative;
         overflow: hidden;

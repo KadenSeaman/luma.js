@@ -7,9 +7,10 @@ interface Props{
     nodeWidth:number;
     nodeHeight:number;
     nodeFontSize:number;
+    selected:boolean;
 }
 
-let {posX, posY, nodeWidth, nodeHeight, nodeFontSize}:Props = $props(); 
+let {posX, posY, nodeWidth, nodeHeight, nodeFontSize, selected}:Props = $props(); 
 
 </script>
 
@@ -19,12 +20,15 @@ let {posX, posY, nodeWidth, nodeHeight, nodeFontSize}:Props = $props();
     style='--posX: {(posX + viewport.offsetX) * viewport.scale}px;
            --posY: {(posY + viewport.offsetY) * viewport.scale}px; 
            --nodeWidth: {nodeWidth * viewport.scale}px; --nodeHeight: {nodeHeight * viewport.scale}px; 
-           --nodeFontSize: {nodeFontSize * viewport.scale}px'>I am a node</div>
+           --nodeFontSize: {nodeFontSize * viewport.scale}px'>I am a node<br>Kaden</div>
 </div>
 
 <style>
   #luma-node{
       font-size: var(--nodeFontSize);
+      text-align: center;
+      padding: 5px;
+      border-radius: 5px;
       position: absolute;
       top: var(--posY);
       left: var(--posX);
@@ -33,11 +37,5 @@ let {posX, posY, nodeWidth, nodeHeight, nodeFontSize}:Props = $props();
       background-color: white;
       border: 1px solid black;
       color: black;
-  }
-  #luma-node:hover{
-      border: 2px dashed black;
-  }
-  #luma-node:active{
-      border: 2px solid black;
   }
 </style>
