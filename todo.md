@@ -1,0 +1,1 @@
+smooth interpolation when zooming
