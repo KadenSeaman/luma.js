@@ -76,7 +76,7 @@ const viewportZoom = (e:WheelEvent) => {
 }
 const startSelect = (e:MouseEvent) => {
     selecting = true;
-    startSelectX = e.clientX;
+    startSelectX = e.clientX - renderer.offsetLeft;
     startSelectY = e.clientY;
 }
 const updateSelect = (e:MouseEvent) => {

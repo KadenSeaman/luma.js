@@ -1,19 +1,18 @@
 <script>
 import LumaRenderer from '../lib/LumaRenderer.svelte';
 import Editor from '../lib/Editor.svelte';
+import Resizer from '../lib/Resizer.svelte';
+
 </script>
 
 <div id="app">
     <Editor />
-    <LumaRenderer grid={true} width=100% height=100% backgroundColor=white></LumaRenderer>
+    <Resizer />
+    <LumaRenderer grid={true} width=auto height=100% backgroundColor=white></LumaRenderer>
 </div>
 
 
 <style>
-    #parser-input{
-        width: 500px;
-        resize: none;
-    }
     #app{
         display: flex;
         width: 100vw;

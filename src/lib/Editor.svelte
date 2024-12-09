@@ -22,6 +22,12 @@
             e.preventDefault();
             deleteSelection();
         }
+
+        numberOfLines = Math.max(numberOfLines, 1);
+    }
+
+    const handleScroll = (e:WheelEvent) => {
+        
     }
 
     const addTab = () => {
@@ -94,12 +100,11 @@
 
 <div class="editor">
     <div class="line-numbers">
-
         {#each {length: numberOfLines} as _, i}
             <span class='line-numbers'>{i + 1}</span>
         {/each}
     </div>
-    <textarea bind:this={editor} onkeydown={handleKeyDown} name="" id=""></textarea>
+    <textarea bind:this={editor} onwheel={handleScroll} onkeydown={handleKeyDown} name="" id=""></textarea>
 </div>
 
 
@@ -110,21 +115,22 @@
         gap: 10px;
         font-family: monospace;
         line-height: 21px;
-        background: white;
-        border-radius: 2px;
+        background: #232323;
         padding: 20px 10px;
         height: 100%;
         overflow: auto;
+        width: 400px;
     }
 
     textarea {
+        margin: 0;
         line-height: 21px;
         overflow-y: visible;
         padding: 0;
         border: 0;
-        background: white;
-        color: black;
-        min-width: 500px;
+        background: #232323;
+        color: #6bbdf8;
+        width: 90%;
         outline: none;
         resize: none;
         white-space: pre;
@@ -137,7 +143,7 @@
         text-align: right;
         display: flex;
         flex-direction: column;
-        color:black;
-        text-decoration: underline;
+        color:#838383;
+        vertical-align: bottom;
     }
 </style>
