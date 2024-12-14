@@ -1,91 +1,96 @@
 <script lang="ts">
-import { viewport } from './shared.svelte.js';
+import { viewport, app, nodeData } from './shared.svelte.js';
 import LumaNode from './LumaNode.svelte';
 
 interface Props{
-    width:string;
-    height:string;
     backgroundColor?: string;
     grid?: boolean;
-    gridColor?: string; 
+    gridColor?: string;
 }
 
-let {width='1920', height='1080', backgroundColor='white', grid=true, gridColor='lightgrey'}:Props = $props();
-
+let {backgroundColor='white', grid=true, gridColor='lightgrey'}:Props = $props();
 
 let dragging:boolean = false;
 
 let zoomMax:number = 15;
 let zoomMin:number = 1;
 
-let mouseX:number = $state(0);
-let mouseY:number = $state(0);
-let prevMouseX:number = 0;
-let prevMouseY:number = 0;
+let relativeMouseX:number = $state(0);
+let relativeMouseY:number = $state(0);
+let absoluteMouseX:number = $state(0);
+let absoluteMouseY:number = $state(0);
+
+let prevRelativeMouseX:number = 0;
+let prevRelativeMouseY:number = 0;
 
 let cursorType:string = $state('default');
 
-let startSelectX = $state(0);
-let startSelectY = $state(0);
-let selectX = $state(0);
-let selectY = $state(0);
-let selectWidth = $state(0);
-let selectHeight = $state(0);
-let selecting = $state(false);
+let startSelectX:number = $state(0);
+let startSelectY:number = $state(0);
+let selectX:number = $state(0);
+let selectY:number = $state(0);
+let selectWidth:number = $state(0);
+let selectHeight:number = $state(0);
+let selecting:boolean = $state(false);
 
 let renderer: HTMLElement;
 
 const startViewportDrag = () => { 
     dragging = true;
     cursorType = 'grabbing';
-    prevMouseX = mouseX;
-    prevMouseY = mouseY;
 }
 const dragViewport = () => {
-    viewport.offsetX += (mouseX - prevMouseX) / viewport.scale;
-    viewport.offsetY += (mouseY - prevMouseY) / viewport.scale;
-
-    prevMouseX = mouseX;
-    prevMouseY = mouseY;
+    viewport.offsetX += (relativeMouseX - prevRelativeMouseX) / viewport.scale;
+    viewport.offsetY += (relativeMouseY - prevRelativeMouseY) / viewport.scale;
 }
 const endViewportDrag = () => {
     dragging = false;
     cursorType = 'default';
 }
-const viewportZoom = (e:WheelEvent) => {
+const zoomViewport = (deltaY:number, mouseOffset:boolean) => {
     //prevent zooming beyond min/max limits
-    if(viewport.scale === zoomMin && e.deltaY > 0) return;
-    if(viewport.scale === zoomMax && e.deltaY < 0) return;
+    if(viewport.scale === zoomMin && deltaY > 0) return;
+    if(viewport.scale === zoomMax && deltaY < 0) return;
 
     //determine zoom direction
-    const zoomDirection:number = e.deltaY < 0 ? 1 : -1;
+    const zoomDirection:number = deltaY < 0 ? 1 : -1;
     const newScale:number = viewport.scale + zoomDirection;
 
     //change offset so the zoom stays centered on middle of screen and moves toward the mouse on zoomin
-    let prevWidth:number = renderer.offsetWidth / viewport.scale;
-    let newWidth:number = renderer.offsetWidth / newScale;
-    let prevHeight:number = renderer.offsetHeight / viewport.scale;
-    let newHeight:number = renderer.offsetHeight / newScale;
+    let prevScaledWidth:number = renderer.offsetWidth / viewport.scale;
+    let newScaledWidth:number = renderer.offsetWidth / newScale;
+    let prevScaledHeight:number = renderer.offsetHeight / viewport.scale;
+    let newScaledHeight:number = renderer.offsetHeight / newScale;
 
-    let mouseWidth:number = zoomDirection === 1 ? mouseX / newScale : 0;
-    let mouseHeight:number = zoomDirection === 1 ? mouseY / newScale : 0;
+    //only zoom towards mouse on zoom in
+    let mouseWidth:number = zoomDirection === 1 && mouseOffset ? relativeMouseX / newScale : 0;
+    let mouseHeight:number = zoomDirection === 1 && mouseOffset ? relativeMouseY / newScale : 0;
 
-    viewport.offsetX -= ((prevWidth - newWidth) / 2) + mouseWidth;
-    viewport.offsetY -= ((prevHeight - newHeight) / 2) + mouseHeight;
+    viewport.offsetX -= ((prevScaledWidth - newScaledWidth) / 2) + mouseWidth;
+    viewport.offsetY -= ((prevScaledHeight - newScaledHeight) / 2) + mouseHeight;
     viewport.scale = newScale;
+}
+const zoomIn = () => {
+    zoomViewport(-1, false);
+}
+const zoomOut = () => {
+    zoomViewport(1, false);
 }
 const startSelect = (e:MouseEvent) => {
     selecting = true;
-    startSelectX = e.clientX - renderer.offsetLeft;
-    startSelectY = e.clientY;
+    startSelectX = absoluteMouseX;
+    startSelectY = absoluteMouseY;
 }
 const updateSelect = (e:MouseEvent) => {
     //if user clicks and selects to the left move visual starts
-    selectX = e.clientX < startSelectX ? e.clientX : startSelectX;
-    selectY = e.clientY < startSelectY ? e.clientY : startSelectY;
+    //this is all calculated based upon origin being at 0,0 in the top left corner of the renderer
+    selectX = absoluteMouseX < startSelectX ? absoluteMouseX : startSelectX;
+    selectY = absoluteMouseY < startSelectY ? absoluteMouseY : startSelectY;
 
-    selectWidth = Math.abs(startSelectX - e.clientX);
-    selectHeight = Math.abs(startSelectY - e.clientY);
+    selectWidth = Math.abs(startSelectX - absoluteMouseX);
+    selectHeight = Math.abs(startSelectY - absoluteMouseY);
+
+
 }
 const endSelect = () => {
     selectWidth = 0;
@@ -102,7 +107,7 @@ const resetViewport = () => {
 }
 const handleWheel = (e:WheelEvent) => {
     e.preventDefault();
-    viewportZoom(e);
+    zoomViewport(e.deltaY, true);
 }
 const handleMouseButtonDown = (e: MouseEvent) => {
     e.preventDefault();
@@ -110,9 +115,17 @@ const handleMouseButtonDown = (e: MouseEvent) => {
     if(e.button === 0) startSelect(e);
 }
 const handleMouse = (e:MouseEvent) => {
-    //origin (0,0) is at the center of the renderer
-    mouseX = e.clientX - renderer.getBoundingClientRect().left - renderer.clientWidth / 2;
-    mouseY = e.clientY - renderer.getBoundingClientRect().top - renderer.clientHeight / 2;
+    //relative mouse's 0,0 (origin) is at the center of the renderer
+    prevRelativeMouseX = relativeMouseX;
+    prevRelativeMouseY = relativeMouseY;
+
+    relativeMouseX = e.clientX - renderer.getBoundingClientRect().left - renderer.clientWidth / 2;
+    relativeMouseY = e.clientY - renderer.getBoundingClientRect().top - renderer.clientHeight / 2;
+
+    //absolute mouse's 0,0 (origin) is at the tope left of the renderer
+    absoluteMouseX = e.clientX - renderer.getBoundingClientRect().left;
+    absoluteMouseY = e.clientY - renderer.getBoundingClientRect().top;
+
 
     if(dragging) dragViewport();
     if(selecting) updateSelect(e);
@@ -125,27 +138,45 @@ const handleMouseButtonUp = (e: MouseEvent) => {
 
 </script>
 
-<div bind:this={renderer} role='button' style:cursor={cursorType} tabindex="0" onmousedown={handleMouseButtonDown} onmouseup={handleMouseButtonUp} onmouseleave={endViewportDrag} onwheel={handleWheel} onmousemove={handleMouse} id='luma-renderer' style:width={width} style:height={height}>
+<div id='luma-renderer' bind:this={renderer} role='button' tabindex="0" onmousedown={handleMouseButtonDown} onmouseup={handleMouseButtonUp} onmouseleave={endViewportDrag} onwheel={handleWheel} onmousemove={handleMouse} style='--width:{`${app.rendererWidth}px`}; --height:{`${app.rendererHeight}px`}; cursor:{cursorType}'>
     <div id='luma-background'
-         style='--offsetX: {viewport.offsetX * viewport.scale}px; --offsetY: {viewport.offsetY * viewport.scale}px; --scale: {viewport.scale * 10}px; --bg-color:{backgroundColor}; --grid-color:{gridColor}' 
-         style:background-color={backgroundColor} 
+         style='--offsetX: {viewport.offsetX * viewport.scale}px; --offsetY: {viewport.offsetY * viewport.scale}px; --scale: {viewport.scale * 10}px; --bg-color:{backgroundColor}; --grid-color:{gridColor};' 
+         style:background-color={backgroundColor}
          class={grid ? 'grid' : ''}>
     </div>
-    <div style='--selectX: {selectX}px; --selectY: {selectY}px; --selectWidth: {selectWidth}px; --selectHeight: {selectHeight}px' id='luma-select'></div>
-    <LumaNode selected={false} posX={500} posY={10} nodeWidth={100} nodeHeight={100} nodeFontSize={12}/>
-    <LumaNode selected={false} posX={300} posY={10} nodeWidth={100} nodeHeight={100} nodeFontSize={12}/>
+    <div id='luma-select' 
+        style='--selectX: {selectX}px; --selectY: {selectY}px; --selectWidth: {selectWidth}px; --selectHeight: {selectHeight}px'>
+    </div>
+
+    {#each nodeData as node, i}
+        <LumaNode selected={false} posX={500 + i * 200} posY={10} nodeWidth={100} nodeHeight={100} nodeFontSize={12} data={nodeData[i]}/>
+    {/each}
+
+    <button aria-label="zoom out" id='luma-zoom-out' onmousedown={zoomOut}>-</button>
+    <button aria-label="zoom in" id='luma-zoom-in' onmousedown={zoomIn}>+</button>
     <button aria-label="reset the renderer view to origin (0,0)" id='luma-reset-view' onmousedown={resetViewport}>Reset</button>
+
     <div id='luma-debug'>
-        <p>x position: {-viewport.offsetX}</p>
-        <p>y position: {viewport.offsetY}</p>
+        <p>x position: {-viewport.offsetX.toFixed(2)}</p>
+        <p>y position: {viewport.offsetY.toFixed(2)}</p>
         <p>scale: {viewport.scale}</p>
-        <p>mouseX: {mouseX}</p>
-        <p>mouseY: {mouseY}</p>
+        <p>mouseX: {relativeMouseX}</p>
+        <p>mouseY: {relativeMouseY}</p>
         <p>selecting: {selecting}</p>
     </div>
 </div>
 
 <style>
+    #luma-renderer{
+        position: relative;
+        overflow: hidden;
+        margin: 0px;
+        padding: 0px;
+        width: var(--width);
+        height: 100%;
+        border-radius: 5px;
+        box-sizing: border-box;
+    }
     #luma-select{
         position: absolute;
         background-color: hsla(0, 0%, 50%, 0.1);
@@ -157,12 +188,6 @@ const handleMouseButtonUp = (e: MouseEvent) => {
         left: var(--selectX);
         z-index: 999;
     }
-    #luma-renderer{
-        position:relative;
-        overflow: hidden;
-        margin:0px;
-        padding:0px;
-    }
     #luma-background{
         background-color: var(--bg-color);
         position: absolute;
@@ -173,17 +198,33 @@ const handleMouseButtonUp = (e: MouseEvent) => {
     }
     #luma-reset-view{
         position: absolute;
-        width: 100px;
-        height: 100px;
+        width: 50px;
+        height: 50px;
         right: 0;
+        bottom: 0;
+    }
+    #luma-zoom-out{
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        right: 100px;
+        bottom: 0;
+    }
+    #luma-zoom-in{
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        right: 50px;
         bottom: 0;
     }
     #luma-debug{
         position: absolute;
-        width: 150px;
-        height: 100px;
         left: 20px;
         top: 0;
+        color: white;
+        font-weight: bold;
+        padding: 10px;
+        border-radius: 2px;
     }
     .grid{
         background-size: var(--scale) var(--scale);

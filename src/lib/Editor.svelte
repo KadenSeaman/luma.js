@@ -1,10 +1,20 @@
 <script lang='ts'>
-	import { browser } from "$app/environment";
+	import { useUpdateNodeInternals } from "reactflow";
+    /*
+        TODO:
+        copy and paste doesnt update line nums 
+        what happens when you run past limit of line nums lol
+    */
+   import { app, nodeData } from "./shared.svelte.js";
+   import type { NodeType } from "./shared.svelte.js";
+
     let numberOfLines:number = $state(1);
     let editor:HTMLTextAreaElement;
 
-    let maxRows = browser ? Math.floor(window.innerHeight / 21) - 1 : 0;
-    
+    const handleKeyUp = (e:KeyboardEvent) => {
+        parseToNodes();
+    }
+
     const handleKeyDown = (e:KeyboardEvent) => {
         if(e.key === 'Tab'){
             e.preventDefault();
@@ -22,12 +32,7 @@
             e.preventDefault();
             deleteSelection();
         }
-
         numberOfLines = Math.max(numberOfLines, 1);
-    }
-
-    const handleScroll = (e:WheelEvent) => {
-        
     }
 
     const addTab = () => {
@@ -70,7 +75,6 @@
         editor.selectionEnd = prevSelectPos;
     }
 
-
     const backspaceSelection = () => {
         let prevSelectPos:number = editor.selectionStart;
 
@@ -96,30 +100,78 @@
         editor.selectionEnd = prevSelectPos;
     }
 
+    const parseToNodes = () => {
+        while(nodeData.length > 0) nodeData.pop();
+
+        let inputStr = editor.value;
+
+        let lines = inputStr.split('\n');
+
+        let nodeList: NodeType[] = [];
+        let nodeTarget: NodeType = {};
+
+        let node = false;
+
+        for(let line of lines){
+            line = line.replace(/^[ \r\n]+/, '').trimEnd();
+
+            //end node
+            if(line[0] === '}'){
+                node = false;
+                nodeList.push(nodeTarget);
+                nodeTarget = {};
+            }
+            //start node
+            else if(line.includes('{')){
+                nodeTarget = {
+                    name: line.replace('{', ''),
+                    attributes: [],
+                    methods: [],
+                };
+                node = true;
+            }
+            else if(line[0] === '\t'){
+                let method = line.includes('(');
+
+                if(method){
+                    nodeTarget?.methods?.push(line.trim());
+                }
+                else{
+                    nodeTarget?.attributes?.push(line.trim());
+                }
+            }
+        }
+
+        for(const node of nodeList){
+            nodeData.push(node);
+        }
+    }
 </script>
 
-<div class="editor">
+<div class="editor" style='--width: {`${app.editorWidth}px`}; --height: {`${app.editorHeight}px`}'>
     <div class="line-numbers">
         {#each {length: numberOfLines} as _, i}
             <span class='line-numbers'>{i + 1}</span>
         {/each}
     </div>
-    <textarea bind:this={editor} onwheel={handleScroll} onkeydown={handleKeyDown} name="" id=""></textarea>
+    <textarea bind:this={editor} onkeyup={handleKeyUp} onkeydown={handleKeyDown} name="" id=""></textarea>
 </div>
 
 
 <style>
     .editor {
-        box-sizing: border-box;
         display: inline-flex;
+        position: relative;
         gap: 10px;
         font-family: monospace;
         line-height: 21px;
         background: #232323;
-        padding: 20px 10px;
-        height: 100%;
         overflow: auto;
-        width: 400px;
+        width: var(--width);
+        margin: 0;
+        padding: 10px 10px;
+        border-radius: 5px;
+        box-sizing: border-box;
     }
 
     textarea {
@@ -127,6 +179,7 @@
         line-height: 21px;
         overflow-y: visible;
         padding: 0;
+        padding-left: 10px;
         border: 0;
         background: #232323;
         color: #6bbdf8;
@@ -139,11 +192,12 @@
     }
 
     .line-numbers{
-        width: 20px;
         text-align: right;
         display: flex;
         flex-direction: column;
         color:#838383;
         vertical-align: bottom;
+        padding-left: 10px;
+        width: 20px;
     }
 </style>

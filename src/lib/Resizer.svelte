@@ -1,18 +1,20 @@
 <script lang='ts'>
-    let cursorType:string = 'default';
-
-    const handleMouseOver = (e:MouseEvent) => {
-        cursorType = 'grab';
-    }
+    import { app } from './shared.svelte';
 </script>
 
-
-<div role="button" style:cusor={cursorType} tabindex="0" onmousemove={handleMouseOver} id='resizer'></div>
+<div role='button' tabindex="0" id='resizer' style='--width: {`${app.resizerWidth}px`}; --height: {`${app.resizerHeight}px`}'></div>
 
 <style>
     #resizer{
+        width: var(--width);
         height: 100%;
-        width: 20px;
-        background-color: purple;
+        background-color: #232323;
+        border-radius: 5px;
+        border: 1px solid darkgray;
+        box-sizing: border-box;
+    }
+    #resizer:hover {
+        background-color: #6bbdf8;
+        cursor: ew-resize;
     }
 </style>
