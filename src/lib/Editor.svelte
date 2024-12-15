@@ -1,12 +1,15 @@
 <script lang='ts'>
+	import { browser } from "$app/environment";
     import { app, nodeData } from "./shared.svelte.js";
     import type { NodeType } from "./shared.svelte.js";
     import { v4 as uuid} from 'uuid';
 
     // State Management
     let numberOfLines:number = $state(1);
+    let currentLineNumber:number = $state(1);
     let editor: HTMLTextAreaElement;
     let lineNumbers: HTMLElement;
+
 
     // Scroll Synchronization
     const synchronizeLineNumberScroll = () => {
@@ -18,6 +21,19 @@
     // Line Number Management
     const updateLineNumbers = () => {
         numberOfLines = Math.max(editor.value.split('\n').length, 1);
+
+        let lines = editor.value;
+        let lineBreaks = 0;
+
+        currentLineNumber = 1;
+
+        for(let i = 0; i < lines.length; i++){
+            if(lines[i] === '\n') lineBreaks++;
+            if(i === editor.selectionStart - 1){
+                currentLineNumber = lineBreaks + 1;
+                break;
+            }
+        }
     };
 
     const insertAtCursor = (text: string) => {
@@ -40,6 +56,9 @@
         if(e.key === 'Tab'){
             e.preventDefault();
             insertAtCursor('\t');
+        }
+        if(e.ctrlKey && e.key === 'l'){
+            e.preventDefault();
         }
 
         setTimeout(() => {
@@ -99,7 +118,7 @@
 <div  class="editor-container" style='--width: {`${app.editorWidth}px`}; --height: {`${app.editorHeight}px`}'>
     <div bind:this={lineNumbers} class="line-numbers">
         {#each {length: numberOfLines} as _, i}
-            <div class='line-number'>{i + 1}</div>
+            <div class={i + 1 === currentLineNumber ? 'selected-line-number' : 'line-number'}>{i + 1}{currentLineNumber}</div>
         {/each}
     </div>
     <textarea bind:this={editor} onscroll={synchronizeLineNumberScroll} onkeyup={handleKeyUp} onkeydown={handleKeyDown} class="editor"></textarea>
@@ -152,5 +171,10 @@
 
     .line-number{
         height: 21px;
+    }
+    .selected-line-number{
+        color:white;
+        height: 21px;
+        text-align: middle;
     }
 </style>
