@@ -2,6 +2,8 @@
 import { viewport, app, nodeData } from './shared.svelte.js';
 import LumaNode from './LumaNode.svelte';
 
+let debug:boolean = false;
+
 interface Props{
     backgroundColor?: string;
     grid?: boolean;
@@ -149,24 +151,35 @@ const handleMouseButtonUp = (e: MouseEvent) => {
     </div>
 
     {#each nodeData as node, i}
-        <LumaNode selected={false} posX={500 + i * 200} posY={10} nodeWidth={100} nodeHeight={100} nodeFontSize={12} data={nodeData[i]}/>
+        <LumaNode selected={false} posX={i * 200} posY={0} nodeWidth={100} nodeHeight={100} nodeFontSize={12} data={nodeData[i]}/>
     {/each}
 
     <button aria-label="zoom out" id='luma-zoom-out' onmousedown={zoomOut}>-</button>
     <button aria-label="zoom in" id='luma-zoom-in' onmousedown={zoomIn}>+</button>
     <button aria-label="reset the renderer view to origin (0,0)" id='luma-reset-view' onmousedown={resetViewport}>Reset</button>
 
-    <div id='luma-debug'>
-        <p>x position: {-viewport.offsetX.toFixed(2)}</p>
-        <p>y position: {viewport.offsetY.toFixed(2)}</p>
-        <p>scale: {viewport.scale}</p>
-        <p>mouseX: {relativeMouseX}</p>
-        <p>mouseY: {relativeMouseY}</p>
-        <p>selecting: {selecting}</p>
-    </div>
+    <svg id='connection-overlay'>
+
+    </svg>
+    {#if debug}
+        <div id='luma-debug'>
+            <p>x position: {-viewport.offsetX.toFixed(2)}</p>
+            <p>y position: {viewport.offsetY.toFixed(2)}</p>
+            <p>scale: {viewport.scale}</p>
+            <p>mouseX: {relativeMouseX}</p>
+            <p>mouseY: {relativeMouseY}</p>
+            <p>selecting: {selecting}</p>
+        </div>
+    {/if}
 </div>
 
 <style>
+    #connection-overlay{
+        width: 100%;
+        height: 100%;
+        position: absolute;
+        pointer-events: none;
+    }
     #luma-renderer{
         position: relative;
         overflow: hidden;

@@ -17,8 +17,6 @@ const handleWindowResize = () => {
 }
 if(browser) window.addEventListener('resize', handleWindowResize);
 
-
-
 const handleMouseUp = (e:MouseEvent) => {
     app.grabbing = false;
 }
@@ -45,7 +43,7 @@ const handleMouseDown = (e:MouseEvent) => {
 <div role='button' tabindex="0" id="app" onmouseup={handleMouseUp} onmousemove={handleMouse} onmousedown={handleMouseDown} onmouseleave={handleMouse}>
     <Editor />
     <Resizer />
-    <LumaRenderer grid={true} gridColor=#333333 backgroundColor=#232323></LumaRenderer>
+    <LumaRenderer grid={true} gridColor=#333333 backgroundColor=#232323 />
 </div>
 
 
@@ -54,5 +52,6 @@ const handleMouseDown = (e:MouseEvent) => {
         display: flex;
         width: 100vw;
         height: 100vh;
+        background-color: #232323;
     }
 </style>

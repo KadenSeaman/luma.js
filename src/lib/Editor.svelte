@@ -1,114 +1,59 @@
 <script lang='ts'>
-	import { useUpdateNodeInternals } from "reactflow";
-    /*
-        TODO:
-        copy and paste doesnt update line nums 
-        what happens when you run past limit of line nums lol
-    */
-   import { app, nodeData } from "./shared.svelte.js";
-   import type { NodeType } from "./shared.svelte.js";
+    import { app, nodeData } from "./shared.svelte.js";
+    import type { NodeType } from "./shared.svelte.js";
+    import { v4 as uuid} from 'uuid';
 
+    // State Management
     let numberOfLines:number = $state(1);
-    let editor:HTMLTextAreaElement;
+    let editor: HTMLTextAreaElement;
+    let lineNumbers: HTMLElement;
+
+    // Scroll Synchronization
+    const synchronizeLineNumberScroll = () => {
+        if(lineNumbers && editor){
+            lineNumbers.scrollTop = editor.scrollTop;
+        }
+    };
+
+    // Line Number Management
+    const updateLineNumbers = () => {
+        numberOfLines = Math.max(editor.value.split('\n').length, 1);
+    };
+
+    const insertAtCursor = (text: string) => {
+        const startPos = editor.selectionStart;
+        const endPos = editor.selectionEnd;
+
+        editor.value = editor.value.slice(0, startPos) + text + editor.value.slice(endPos);
+
+        // Reposition cursor
+        const newCursorPos = startPos + text.length;
+        editor.selectionStart = newCursorPos;
+        editor.selectionEnd = newCursorPos;
+    };
 
     const handleKeyUp = (e:KeyboardEvent) => {
-        parseToNodes();
-    }
+        parseTextToNodes();
+    };
 
     const handleKeyDown = (e:KeyboardEvent) => {
         if(e.key === 'Tab'){
             e.preventDefault();
-            addTab();
+            insertAtCursor('\t');
         }
-        if(e.key === 'Enter'){
-            e.preventDefault();
-            addLine();
-        }
-        if(e.key === 'Backspace'){
-            e.preventDefault();
-            backspaceSelection();
-        }
-        if(e.key === 'Delete'){
-            e.preventDefault();
-            deleteSelection();
-        }
-        numberOfLines = Math.max(numberOfLines, 1);
+
+        setTimeout(() => {
+                updateLineNumbers();
+        }, 1);
     }
 
-    const addTab = () => {
-        let prevSelectPos = editor.selectionStart;
+    const parseTextToNodes = () => {
+        nodeData.length = 0;
 
-        let selectedString = editor.value.slice(editor.selectionStart, editor.selectionEnd);
+        const lines = editor.value.split('\n');
 
-        let numberOfLinesDeleted = selectedString.split('\n').length - 1 || 0;
-        numberOfLines -= numberOfLinesDeleted;
-
-        editor.value = editor.value.slice(0,editor.selectionStart) + '\t' + editor.value.slice(editor.selectionEnd);
-        editor.selectionStart = prevSelectPos + 1;
-        editor.selectionEnd = prevSelectPos + 1;
-    }
-
-    const addLine = () => {
-        let prevSelectPos = editor.selectionStart;
-
-        let selectedString = editor.value.slice(editor.selectionStart, editor.selectionEnd);
-
-        let numberOfLinesDeleted = selectedString.split('\n').length - 1 || 0;
-        numberOfLines -= numberOfLinesDeleted;
-
-        editor.value = editor.value.slice(0,editor.selectionStart) + '\n' + editor.value.slice(editor.selectionEnd);
-        editor.selectionStart = prevSelectPos + 1;
-        editor.selectionEnd = prevSelectPos + 1;
-        numberOfLines++;
-    }
-
-    const deleteSelection = () => {
-        let prevSelectPos = editor.selectionStart;
-
-        let selectedString = editor.value.slice(editor.selectionStart, editor.selectionEnd);
-
-        let numberOfLinesDeleted = selectedString.split('\n').length;
-        numberOfLines -= numberOfLinesDeleted;
-
-        editor.value = editor.value.slice(0,editor.selectionStart) + editor.value.slice(editor.selectionEnd + 1);
-        editor.selectionStart = prevSelectPos;
-        editor.selectionEnd = prevSelectPos;
-    }
-
-    const backspaceSelection = () => {
-        let prevSelectPos:number = editor.selectionStart;
-
-        //multiple select
-        if(Math.abs(editor.selectionStart - editor.selectionEnd) > 0){
-            let selectedString = '';
-            selectedString = editor.value.slice(editor.selectionStart, editor.selectionEnd + 1);
-
-            let numberOfLinesDeleted = selectedString.split('\n').length - 1;
-
-            numberOfLines -= numberOfLinesDeleted;
-            editor.value = editor.value.slice(0,editor.selectionStart) + editor.value.slice(editor.selectionEnd);
-        }
-        //no select
-        else{
-            let selectedString = '';
-            selectedString = editor.value.slice(editor.selectionStart - 1, editor.selectionEnd);
-            if(selectedString === '\n') numberOfLines--;
-            editor.value = editor.value.slice(0, editor.selectionStart - 1) + editor.value.slice(editor.selectionEnd);
-            prevSelectPos--;
-        }
-        editor.selectionStart = prevSelectPos;
-        editor.selectionEnd = prevSelectPos;
-    }
-
-    const parseToNodes = () => {
-        while(nodeData.length > 0) nodeData.pop();
-
-        let inputStr = editor.value;
-
-        let lines = inputStr.split('\n');
-
-        let nodeList: NodeType[] = [];
-        let nodeTarget: NodeType = {};
+        const nodeList: NodeType[] = [];
+        let currentNode: NodeType = {};
 
         let node = false;
 
@@ -118,15 +63,17 @@
             //end node
             if(line[0] === '}'){
                 node = false;
-                nodeList.push(nodeTarget);
-                nodeTarget = {};
+                nodeList.push(currentNode);
+                currentNode = {};
             }
             //start node
             else if(line.includes('{')){
-                nodeTarget = {
+                currentNode = {
+                    id: uuid(),
                     name: line.replace('{', ''),
                     attributes: [],
                     methods: [],
+                    connections: []
                 };
                 node = true;
             }
@@ -134,61 +81,62 @@
                 let method = line.includes('(');
 
                 if(method){
-                    nodeTarget?.methods?.push(line.trim());
+                    currentNode?.methods?.push(line.trim());
+                }
+                else if(line.slice(1,4) === '-->'){
+                    currentNode?.connections?.push(line.replace('-->',''));
                 }
                 else{
-                    nodeTarget?.attributes?.push(line.trim());
+                    currentNode?.attributes?.push(line.trim());
                 }
             }
         }
 
-        for(const node of nodeList){
-            nodeData.push(node);
-        }
+        nodeData.push(...nodeList);
     }
 </script>
 
-<div class="editor" style='--width: {`${app.editorWidth}px`}; --height: {`${app.editorHeight}px`}'>
-    <div class="line-numbers">
+<div  class="editor-container" style='--width: {`${app.editorWidth}px`}; --height: {`${app.editorHeight}px`}'>
+    <div bind:this={lineNumbers} class="line-numbers">
         {#each {length: numberOfLines} as _, i}
-            <span class='line-numbers'>{i + 1}</span>
+            <div class='line-number'>{i + 1}</div>
         {/each}
     </div>
-    <textarea bind:this={editor} onkeyup={handleKeyUp} onkeydown={handleKeyDown} name="" id=""></textarea>
+    <textarea bind:this={editor} onscroll={synchronizeLineNumberScroll} onkeyup={handleKeyUp} onkeydown={handleKeyDown} class="editor"></textarea>
 </div>
 
 
 <style>
-    .editor {
-        display: inline-flex;
-        position: relative;
-        gap: 10px;
-        font-family: monospace;
-        line-height: 21px;
-        background: #232323;
-        overflow: auto;
+    .editor-container{
+        box-sizing: border-box;
         width: var(--width);
         margin: 0;
         padding: 10px 10px;
         border-radius: 5px;
-        box-sizing: border-box;
+        gap: 10px;
+        display: flex;
+        position: relative;
+        font-family: monospace;
+        line-height: 21px;
+        background: #232323;
+        overflow: hidden;
     }
 
-    textarea {
+    .editor{
         margin: 0;
         line-height: 21px;
-        overflow-y: visible;
         padding: 0;
-        padding-left: 10px;
+        padding-right: 30px;
+        margin-left: 10px;
         border: 0;
         background: #232323;
         color: #6bbdf8;
+        height: 100%;
         width: 90%;
         outline: none;
         resize: none;
         white-space: pre;
-        overflow-wrap: normal;
-        overflow-x: scroll;
+        overflow-y: scroll;
     }
 
     .line-numbers{
@@ -197,7 +145,12 @@
         flex-direction: column;
         color:#838383;
         vertical-align: bottom;
-        padding-left: 10px;
-        width: 20px;
+        width: 30px;
+        overflow-y: hidden;
+        scrollbar-width: 0px;
+    }
+
+    .line-number{
+        height: 21px;
     }
 </style>

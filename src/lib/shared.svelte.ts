@@ -17,9 +17,11 @@ export const app = $state({
 })
 
 export interface NodeType{
+    id?: string;
     name?: string;
     attributes?: string[];
     methods?: string[];
+    connections?:string[];
 }
 
 export let nodeData = $state<NodeType[]>([]);
