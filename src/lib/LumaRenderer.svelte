@@ -2,6 +2,7 @@
 import { viewport, app, nodeData } from './shared.svelte.js';
 import LumaNode from './LumaNode.svelte';
 
+
 let debug:boolean = false;
 
 interface Props{
@@ -36,6 +37,9 @@ let selectHeight:number = $state(0);
 let selecting:boolean = $state(false);
 
 let renderer: HTMLElement;
+let rendererWidth:number = $state(0);
+let rendererHeight:number = $state(0);
+let svg: SVGElement;
 
 const startViewportDrag = () => { 
     dragging = true;
@@ -91,8 +95,6 @@ const updateSelect = (e:MouseEvent) => {
 
     selectWidth = Math.abs(startSelectX - absoluteMouseX);
     selectHeight = Math.abs(startSelectY - absoluteMouseY);
-
-
 }
 const endSelect = () => {
     selectWidth = 0;
@@ -137,10 +139,17 @@ const handleMouseButtonUp = (e: MouseEvent) => {
     if(e.button === 1) endViewportDrag();
     if(e.button === 0) endSelect();
 }
-
 </script>
 
 <div id='luma-renderer' bind:this={renderer} role='button' tabindex="0" onmousedown={handleMouseButtonDown} onmouseup={handleMouseButtonUp} onmouseleave={endViewportDrag} onwheel={handleWheel} onmousemove={handleMouse} style='--width:{`${app.rendererWidth}px`}; --height:{`${app.rendererHeight}px`}; cursor:{cursorType}'>
+    <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio='none' viewBox='0 0 {app.rendererWidth} {app.rendererHeight}' id='connection-overlay' bind:this={svg}>
+        <line   x1="{(viewport.offsetX + 70) * viewport.scale}" 
+                y1="{(viewport.offsetY + 30) * viewport.scale}" 
+                x2="{(viewport.offsetX + 210) * viewport.scale}" 
+                y2="{(viewport.offsetY + 30) * viewport.scale}" 
+                stroke="white" 
+                stroke-width="{2 * viewport.scale}"/>
+    </svg>
     <div id='luma-background'
          style='--offsetX: {viewport.offsetX * viewport.scale}px; --offsetY: {viewport.offsetY * viewport.scale}px; --scale: {viewport.scale * 10}px; --bg-color:{backgroundColor}; --grid-color:{gridColor};' 
          style:background-color={backgroundColor}
@@ -152,15 +161,13 @@ const handleMouseButtonUp = (e: MouseEvent) => {
 
     {#each nodeData as node, i}
         <LumaNode selected={false} posX={i * 200} posY={0} nodeWidth={100} nodeHeight={100} nodeFontSize={12} data={nodeData[i]}/>
+        {node.connections}
     {/each}
 
     <button aria-label="zoom out" id='luma-zoom-out' onmousedown={zoomOut}>-</button>
     <button aria-label="zoom in" id='luma-zoom-in' onmousedown={zoomIn}>+</button>
     <button aria-label="reset the renderer view to origin (0,0)" id='luma-reset-view' onmousedown={resetViewport}>Reset</button>
 
-    <svg id='connection-overlay'>
-
-    </svg>
     {#if debug}
         <div id='luma-debug'>
             <p>x position: {-viewport.offsetX.toFixed(2)}</p>
@@ -178,7 +185,12 @@ const handleMouseButtonUp = (e: MouseEvent) => {
         width: 100%;
         height: 100%;
         position: absolute;
+        top:0;
+        left:0;
+        padding:0;
+        margin:0;
         pointer-events: none;
+        z-index: 99999;
     }
     #luma-renderer{
         position: relative;

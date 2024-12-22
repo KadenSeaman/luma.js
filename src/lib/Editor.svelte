@@ -1,5 +1,4 @@
 <script lang='ts'>
-	import { browser } from "$app/environment";
     import { app, nodeData } from "./shared.svelte.js";
     import type { NodeType } from "./shared.svelte.js";
     import { v4 as uuid} from 'uuid';
@@ -29,7 +28,10 @@
 
         for(let i = 0; i < lines.length; i++){
             if(lines[i] === '\n') lineBreaks++;
-            if(i === editor.selectionStart - 1){
+
+            let dir = editor.selectionDirection === 'forward' ? editor.selectionEnd : editor.selectionStart;
+
+            if(i === dir - 1){
                 currentLineNumber = lineBreaks + 1;
                 break;
             }
@@ -118,7 +120,7 @@
 <div  class="editor-container" style='--width: {`${app.editorWidth}px`}; --height: {`${app.editorHeight}px`}'>
     <div bind:this={lineNumbers} class="line-numbers">
         {#each {length: numberOfLines} as _, i}
-            <div class={i + 1 === currentLineNumber ? 'selected-line-number' : 'line-number'}>{i + 1}{currentLineNumber}</div>
+            <div class={i + 1 === currentLineNumber ? 'selected-line-number' : 'line-number'}>{i + 1}</div>
         {/each}
     </div>
     <textarea bind:this={editor} onscroll={synchronizeLineNumberScroll} onkeyup={handleKeyUp} onkeydown={handleKeyDown} class="editor"></textarea>

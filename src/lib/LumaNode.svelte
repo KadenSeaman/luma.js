@@ -20,6 +20,7 @@ let {posX, posY, nodeWidth, nodeHeight, nodeFontSize, selected = false, data}:Pr
     id='luma-node' 
     style='--posX: {(posX + viewport.offsetX) * viewport.scale}px;
            --posY: {(posY + viewport.offsetY) * viewport.scale}px; 
+           --scale: {viewport.scale};
            --nodeWidth: {nodeWidth * viewport.scale}px; --nodeHeight: {nodeHeight * viewport.scale}px; 
            --nodeFontSize: {nodeFontSize * viewport.scale}px'>
           
@@ -47,12 +48,11 @@ let {posX, posY, nodeWidth, nodeHeight, nodeFontSize, selected = false, data}:Pr
   #luma-node{
       font-size: var(--nodeFontSize);
       text-align: center;
-      padding: 5px;
+      padding: calc(var(--scale) * 10px);
       border-radius: 15px;
       position: absolute;
       top: var(--posY);
       left: var(--posX);
-      width: var(--nodeWidth);
       background-color: white;
       border: 1px solid black;
       color: black;
@@ -66,7 +66,7 @@ let {posX, posY, nodeWidth, nodeHeight, nodeFontSize, selected = false, data}:Pr
     font-weight: bold;
   }
   .break{
-    width: 90%;
+    width: 95%;
     border: 1px solid black;
   }
   ol{
@@ -74,8 +74,7 @@ let {posX, posY, nodeWidth, nodeHeight, nodeFontSize, selected = false, data}:Pr
     margin:0;
   }
   li{
-    margin-top: 10px;
-    padding-bottom: 10px;
+    margin-top: 5px;
     list-style: none;
   }
 
