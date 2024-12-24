@@ -16,12 +16,17 @@ export const app = $state({
     grabbing: false,
 })
 
+export const renderedNodes:any = $state({})
+
 export interface NodeType{
-    id?: string;
     name?: string;
     attributes?: string[];
     methods?: string[];
-    connections?:string[];
+}
+
+export interface NodeConnection{
+    [index: number] : string;
 }
 
 export let nodeData = $state<NodeType[]>([]);
+export let connectionData = $state<NodeConnection[]>([]);

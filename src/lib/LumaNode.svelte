@@ -1,5 +1,6 @@
 <script lang='ts'>
-import { viewport } from './shared.svelte.js';
+import { onMount } from 'svelte';
+import { viewport, renderedNodes } from './shared.svelte.js';
 
 interface Props{
     posX:number;
@@ -13,39 +14,46 @@ interface Props{
 
 let {posX, posY, nodeWidth, nodeHeight, nodeFontSize, selected = false, data}:Props = $props(); 
 
-</script>
+let thisNode: HTMLElement | null = $state(null);
+ 
+onMount(() => {
+  renderedNodes[data.id.toString()] = thisNode;
+})
 
+</script>
 <div>
   <div 
-    id='luma-node' 
-    style='--posX: {(posX + viewport.offsetX) * viewport.scale}px;
-           --posY: {(posY + viewport.offsetY) * viewport.scale}px; 
-           --scale: {viewport.scale};
-           --nodeWidth: {nodeWidth * viewport.scale}px; --nodeHeight: {nodeHeight * viewport.scale}px; 
-           --nodeFontSize: {nodeFontSize * viewport.scale}px'>
-          
-    <p id='title'>{data.name}</p>
-    {#if data.attributes[0]} 
-      <div class='break'></div>
-      <ol>
-        {#each data.attributes as attr}
-          <li class='attribute'>{attr.trim()}</li>
-        {/each}
-      </ol> 
-    {/if}
-    {#if data.methods[0]}
-      <div class='break'></div>
-      <ol>
-        {#each data.methods as method}
-          <li class='method'>{method.trim()}</li>
-        {/each}
-      </ol>
-    {/if}
-    </div>
+  bind:this = {thisNode}
+  class='luma-node'
+  style='--posX: {(posX + viewport.offsetX) * viewport.scale}px;
+          --posY: {(posY + viewport.offsetY) * viewport.scale}px; 
+          --scale: {viewport.scale};
+          --nodeWidth: {nodeWidth * viewport.scale}px; --nodeHeight: {nodeHeight * viewport.scale}px; 
+          --nodeFontSize: {nodeFontSize * viewport.scale}px'>
+        
+  <p id='title'>{data.name}</p>
+  {#if data.attributes[0]} 
+    <div class='break'></div>
+    <ol>
+      {#each data.attributes as attr}
+        <li class='attribute'>{attr.trim()}</li>
+      {/each}
+    </ol> 
+  {/if}
+  {#if data.methods[0]}
+    <div class='break'></div>
+    <ol>
+      {#each data.methods as method}
+        <li class='method'>{method.trim()}</li>
+      {/each}
+    </ol>
+  {/if}
+</div>
 </div>
 
+
 <style>
-  #luma-node{
+  .luma-node{
       font-size: var(--nodeFontSize);
       text-align: center;
       padding: calc(var(--scale) * 10px);

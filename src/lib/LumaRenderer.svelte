@@ -1,5 +1,5 @@
 <script lang="ts">
-import { viewport, app, nodeData } from './shared.svelte.js';
+import { viewport, app, nodeData, connectionData } from './shared.svelte.js';
 import LumaNode from './LumaNode.svelte';
 
 
@@ -37,9 +37,6 @@ let selectHeight:number = $state(0);
 let selecting:boolean = $state(false);
 
 let renderer: HTMLElement;
-let rendererWidth:number = $state(0);
-let rendererHeight:number = $state(0);
-let svg: SVGElement;
 
 const startViewportDrag = () => { 
     dragging = true;
@@ -142,14 +139,6 @@ const handleMouseButtonUp = (e: MouseEvent) => {
 </script>
 
 <div id='luma-renderer' bind:this={renderer} role='button' tabindex="0" onmousedown={handleMouseButtonDown} onmouseup={handleMouseButtonUp} onmouseleave={endViewportDrag} onwheel={handleWheel} onmousemove={handleMouse} style='--width:{`${app.rendererWidth}px`}; --height:{`${app.rendererHeight}px`}; cursor:{cursorType}'>
-    <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio='none' viewBox='0 0 {app.rendererWidth} {app.rendererHeight}' id='connection-overlay' bind:this={svg}>
-        <line   x1="{(viewport.offsetX + 70) * viewport.scale}" 
-                y1="{(viewport.offsetY + 30) * viewport.scale}" 
-                x2="{(viewport.offsetX + 210) * viewport.scale}" 
-                y2="{(viewport.offsetY + 30) * viewport.scale}" 
-                stroke="white" 
-                stroke-width="{2 * viewport.scale}"/>
-    </svg>
     <div id='luma-background'
          style='--offsetX: {viewport.offsetX * viewport.scale}px; --offsetY: {viewport.offsetY * viewport.scale}px; --scale: {viewport.scale * 10}px; --bg-color:{backgroundColor}; --grid-color:{gridColor};' 
          style:background-color={backgroundColor}
@@ -161,8 +150,19 @@ const handleMouseButtonUp = (e: MouseEvent) => {
 
     {#each nodeData as node, i}
         <LumaNode selected={false} posX={i * 200} posY={0} nodeWidth={100} nodeHeight={100} nodeFontSize={12} data={nodeData[i]}/>
-        {node.connections}
     {/each}
+
+    <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio='none' viewBox='0 0 {app.rendererWidth} {app.rendererHeight}' id='connection-overlay'>
+        {#each connectionData as connection, i}
+            <line   x1="{(viewport.offsetX + 50) * viewport.scale}" 
+                    y1="{(viewport.offsetY + 30) * viewport.scale}" 
+                    x2="{(viewport.offsetX + 210) * viewport.scale}" 
+                    y2="{(viewport.offsetY + 30) * viewport.scale}" 
+                    stroke="white" 
+                    stroke-width="{2 * viewport.scale}"/>
+        {/each}
+
+    </svg>
 
     <button aria-label="zoom out" id='luma-zoom-out' onmousedown={zoomOut}>-</button>
     <button aria-label="zoom in" id='luma-zoom-in' onmousedown={zoomIn}>+</button>
@@ -178,6 +178,8 @@ const handleMouseButtonUp = (e: MouseEvent) => {
             <p>selecting: {selecting}</p>
         </div>
     {/if}
+
+
 </div>
 
 <style>

@@ -1,7 +1,6 @@
 <script lang='ts'>
-    import { app, nodeData } from "./shared.svelte.js";
+    import { app, connectionData, nodeData } from "./shared.svelte.js";
     import type { NodeType } from "./shared.svelte.js";
-    import { v4 as uuid} from 'uuid';
 
     // State Management
     let numberOfLines:number = $state(1);
@@ -69,9 +68,10 @@
     }
 
     const parseTextToNodes = () => {
+        for(const connection of connectionData) connectionData.pop();
         nodeData.length = 0;
 
-        const lines = editor.value.split('\n');
+        const lines: String[] = editor.value.split('\n');
 
         const nodeList: NodeType[] = [];
         let currentNode: NodeType = {};
@@ -90,11 +90,9 @@
             //start node
             else if(line.includes('{')){
                 currentNode = {
-                    id: uuid(),
                     name: line.replace('{', ''),
                     attributes: [],
                     methods: [],
-                    connections: []
                 };
                 node = true;
             }
@@ -105,19 +103,20 @@
                     currentNode?.methods?.push(line.trim());
                 }
                 else if(line.slice(1,4) === '-->'){
-                    currentNode?.connections?.push(line.replace('-->',''));
+                    let targetName = line.slice(line.indexOf('>') + 1);
+                    connectionData.push([currentNode.name || '', targetName]);
                 }
                 else{
                     currentNode?.attributes?.push(line.trim());
                 }
             }
         }
-
         nodeData.push(...nodeList);
     }
+
 </script>
 
-<div  class="editor-container" style='--width: {`${app.editorWidth}px`}; --height: {`${app.editorHeight}px`}'>
+<div class="editor-container" style='--width: {`${app.editorWidth}px`}; --height: {`${app.editorHeight}px`}'>
     <div bind:this={lineNumbers} class="line-numbers">
         {#each {length: numberOfLines} as _, i}
             <div class={i + 1 === currentLineNumber ? 'selected-line-number' : 'line-number'}>{i + 1}</div>
