@@ -2,8 +2,6 @@ export const viewport = $state({
     offsetX: 0,
     offsetY: 0,
     scale: 2,
-    effectiveX: 0,
-    effectiveY: 0,
 })
 
 export const app = $state({
@@ -16,7 +14,9 @@ export const app = $state({
     grabbing: false,
 })
 
-export const renderedNodes:any = $state({})
+export const renderedNodes:any = {
+
+}
 
 export interface NodeType{
     name?: string;

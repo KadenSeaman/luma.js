@@ -14,6 +14,7 @@ app.rendererWidth = browser ? window.innerWidth * 0.75 - app.resizerWidth : 0;
 
 const handleWindowResize = () => {
     app.rendererWidth = browser ? window.innerWidth - app.editorWidth - app.resizerWidth : 0;
+    app.rendererHeight = browser ? window.innerHeight : 0;
 }
 if(browser) window.addEventListener('resize', handleWindowResize);
 
@@ -30,7 +31,7 @@ const handleMouse = (e:MouseEvent) => {
         if(app.grabbing){
             app.rendererWidth = window.innerWidth - e.clientX - app.resizerWidth;
             app.editorWidth = Math.max(0, e.clientX);
-        }   
+        }
     }
 
 const handleMouseDown = (e:MouseEvent) => {

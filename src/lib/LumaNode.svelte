@@ -1,34 +1,36 @@
 <script lang='ts'>
 import { onMount } from 'svelte';
 import { viewport, renderedNodes } from './shared.svelte.js';
+	import { scale } from 'svelte/transition';
 
 interface Props{
     posX:number;
     posY:number;
-    nodeWidth:number;
-    nodeHeight:number;
     nodeFontSize:number;
-    selected?:boolean;
     data: any;
 }
 
-let {posX, posY, nodeWidth, nodeHeight, nodeFontSize, selected = false, data}:Props = $props(); 
+let {posX, posY, nodeFontSize, data}:Props = $props(); 
 
 let thisNode: HTMLElement | null = $state(null);
- 
+
 onMount(() => {
-  renderedNodes[data.id.toString()] = thisNode;
+  renderedNodes[data.name] = thisNode;
 })
 
 </script>
-<div>
   <div 
+  data-x = {posX}
+  data-y = {posY}
+  data-w = {thisNode?.clientWidth || 0 / viewport.scale}
+  data-h = {thisNode?.clientHeight || 0 / viewport.scale}
+
   bind:this = {thisNode}
+
   class='luma-node'
   style='--posX: {(posX + viewport.offsetX) * viewport.scale}px;
           --posY: {(posY + viewport.offsetY) * viewport.scale}px; 
           --scale: {viewport.scale};
-          --nodeWidth: {nodeWidth * viewport.scale}px; --nodeHeight: {nodeHeight * viewport.scale}px; 
           --nodeFontSize: {nodeFontSize * viewport.scale}px'>
         
   <p id='title'>{data.name}</p>
@@ -49,14 +51,12 @@ onMount(() => {
     </ol>
   {/if}
 </div>
-</div>
 
 
 <style>
   .luma-node{
       font-size: var(--nodeFontSize);
       text-align: center;
-      padding: calc(var(--scale) * 10px);
       border-radius: 15px;
       position: absolute;
       top: var(--posY);
@@ -68,6 +68,8 @@ onMount(() => {
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      box-sizing: border-box;
+      padding: calc(var(--scale) * 10px);
   }
   #title{
     font-size: var(--nodeFontSize);
