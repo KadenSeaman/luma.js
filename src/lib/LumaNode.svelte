@@ -1,78 +1,64 @@
 <script lang='ts'>
-import { onMount } from 'svelte';
-import { viewport, renderedNodes } from './shared.svelte.js';
-	import { scale } from 'svelte/transition';
+import { viewport, type NodeType } from './shared.svelte.js';
 
-interface Props{
-    posX:number;
-    posY:number;
-    nodeFontSize:number;
-    data: any;
-}
-
-let {posX, posY, nodeFontSize, data}:Props = $props(); 
-
-let thisNode: HTMLElement | null = $state(null);
-
-onMount(() => {
-  renderedNodes[data.name] = thisNode;
-})
+let {name, x, y, width, height, attributes, methods}:NodeType = $props(); 
 
 </script>
   <div 
-  data-x = {posX}
-  data-y = {posY}
-  data-w = {thisNode?.clientWidth || 0 / viewport.scale}
-  data-h = {thisNode?.clientHeight || 0 / viewport.scale}
-
-  bind:this = {thisNode}
-
   class='luma-node'
-  style='--posX: {(posX + viewport.offsetX) * viewport.scale}px;
-          --posY: {(posY + viewport.offsetY) * viewport.scale}px; 
+  style='--x: {(x + viewport.offsetX) * viewport.scale}px;
+          --y: {(y + viewport.offsetY) * viewport.scale}px; 
+          --width: {width * viewport.scale};
+          --height: {height * viewport.scale};
           --scale: {viewport.scale};
-          --nodeFontSize: {nodeFontSize * viewport.scale}px'>
+          --fontSize: {12 * viewport.scale}px'>
         
-  <p id='title'>{data.name}</p>
-  {#if data.attributes[0]} 
+  <p id='title'>{name}</p>
+  {#if attributes[0]} 
     <div class='break'></div>
     <ol>
-      {#each data.attributes as attr}
+      {#each attributes as attr}
         <li class='attribute'>{attr.trim()}</li>
       {/each}
     </ol> 
   {/if}
-  {#if data.methods[0]}
+  {#if methods[0]}
     <div class='break'></div>
     <ol>
-      {#each data.methods as method}
+      {#each methods as method}
         <li class='method'>{method.trim()}</li>
       {/each}
     </ol>
   {/if}
 </div>
 
-
 <style>
   .luma-node{
-      font-size: var(--nodeFontSize);
-      text-align: center;
-      border-radius: 15px;
       position: absolute;
-      top: var(--posY);
-      left: var(--posX);
+      left: var(--x);
+      top: var(--y);
+
+      width: var(--width);
+      height: var(--height);
+
+      font-size: var(--fontSize);
+      text-align: center;
+      color: black;
+
+      border-radius: 15px;
       background-color: white;
       border: 1px solid black;
-      color: black;
+
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+
       box-sizing: border-box;
       padding: calc(var(--scale) * 10px);
   }
   #title{
-    font-size: var(--nodeFontSize);
+    font-size: var(--fontSize);
     font-weight: bold;
   }
   .break{
@@ -87,5 +73,4 @@ onMount(() => {
     margin-top: 5px;
     list-style: none;
   }
-
 </style>

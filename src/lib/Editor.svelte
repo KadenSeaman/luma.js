@@ -1,12 +1,13 @@
 <script lang='ts'>
-    import { app, connectionData, nodeData } from "./shared.svelte.js";
-    import type { NodeType } from "./shared.svelte.js";
+    import { app, parsedConnections, parsedNodes} from "./shared.svelte.js";
+    import type { ConnectionType, NodeType } from "./shared.svelte.js";
 
     // State Management
     let numberOfLines:number = $state(1);
     let currentLineNumber:number = $state(1);
     let editor: HTMLTextAreaElement;
     let lineNumbers: HTMLElement;
+    let numberOfNodes:number = $state(0);
 
 
     // Scroll Synchronization
@@ -68,34 +69,43 @@
     }
 
     const parseTextToNodes = () => {
-        for(const connection of connectionData) connectionData.pop();
-        nodeData.length = 0;
+        const nodeList: NodeType[] = [];
+        const connectionList: ConnectionType[] = [];
+
+        parsedConnections.length = 0;
+        parsedNodes.length = 0;
+        numberOfNodes = 0;
 
         const lines: String[] = editor.value.split('\n');
-
-        const nodeList: NodeType[] = [];
-        let currentNode: NodeType = {};
-
-        let node = false;
 
         for(let line of lines){
             line = line.replace(/^[ \r\n]+/, '').trimEnd();
 
-            //end node
-            if(line[0] === '}'){
-                node = false;
-                nodeList.push(currentNode);
-                currentNode = {};
-            }
             //start node
-            else if(line.includes('{')){
-                currentNode = {
+            if(line.includes('{')){
+                let calcX = numberOfNodes * 200;
+                let calcY = 0;
+                let calcWidth = 100;
+                let calcHeight = 100;
+
+                let currentNode:NodeType = {
+                    id: numberOfNodes,
                     name: line.replace('{', ''),
+                    x: calcX,
+                    y: calcY,
+                    width: calcWidth,
+                    height: calcHeight,
+                    leftConnection: [calcX, calcY + calcHeight / 2],
+                    rightConnection: [calcX + calcWidth, calcY + calcHeight / 2],
+                    bottomConnection: [calcX + calcWidth / 2, calcY + calcHeight],
+                    topConnection: [calcX + calcWidth / 2, calcY],
                     attributes: [],
                     methods: [],
                 };
-                node = true;
+
+                nodeList.push(currentNode);
             }
+            //attribute/method etc.
             else if(line[0] === '\t'){
                 let method = line.includes('(');
 
@@ -104,14 +114,23 @@
                 }
                 else if(line.slice(1,4) === '-->'){
                     let targetName = line.slice(line.indexOf('>') + 1);
-                    connectionData.push([currentNode.name || '', targetName]);
                 }
                 else{
                     currentNode?.attributes?.push(line.trim());
                 }
             }
+            //end node
+            else if(line[0] === '}'){
+                if(currentNode) nodeList.push(currentNode);
+                currentNode = null;
+                numberOfNodes++;
+            }
         }
-        nodeData.push(...nodeList);
+
+
+
+        parsedNodes.push(...nodeList);
+        parsedConnections.push(...connectionList);
     }
 
 </script>
@@ -176,6 +195,6 @@
     .selected-line-number{
         color:white;
         height: 21px;
-        text-align: middle;
+        text-align: center;
     }
 </style>

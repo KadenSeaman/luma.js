@@ -14,19 +14,29 @@ export const app = $state({
     grabbing: false,
 })
 
-export const renderedNodes:any = {
-
-}
-
 export interface NodeType{
-    name?: string;
-    attributes?: string[];
-    methods?: string[];
+    name: string;
+    id: number;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    leftConnection: [number,number];
+    rightConnection: [number,number];
+    topConnection: [number,number];
+    bottomConnection: [number,number];
+    attributes: string[];
+    methods: string[];
 }
 
-export interface NodeConnection{
-    [index: number] : string;
+export interface ConnectionType{
+    rootName: string;
+    targetName: string;
+    rootX: number;
+    rootY: number;
+    targetX: number;
+    targetY: number;
 }
 
-export let nodeData = $state<NodeType[]>([]);
-export let connectionData = $state<NodeConnection[]>([]);
+export let parsedNodes = $state<NodeType[]>([]);
+export let parsedConnections = $state<ConnectionType[]>([]);

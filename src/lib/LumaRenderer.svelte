@@ -1,9 +1,7 @@
 <script lang="ts">
-import { viewport, app, nodeData, connectionData, renderedNodes } from './shared.svelte.js';
+import { viewport, app, parsedConnections, parsedNodes } from './shared.svelte.js';
 import LumaNode from './LumaNode.svelte';
 import LumaConnection from './LumaConnection.svelte';
-import type { NodeConnection } from './shared.svelte.js';
-
 
 let debug:boolean = true;
 
@@ -156,33 +154,43 @@ const handleMouseButtonUp = (e: MouseEvent) => {
         style='--selectX: {selectX}px; --selectY: {selectY}px; --selectWidth: {selectWidth}px; --selectHeight: {selectHeight}px'>
     </div>
 
-    {#each nodeData as data, i}
-        <LumaNode posX={i * 200} posY={0} nodeFontSize={12} data={data}/>
+    {#each parsedNodes as node}
+        <LumaNode   id={node.id}
+                    name={node.name} 
+                    x={node.x} 
+                    y={node.y}
+                    width={node.width} 
+                    height={node.height} 
+                    leftConnection={node.leftConnection}
+                    rightConnection={node.rightConnection}
+                    bottomConnection={node.bottomConnection}
+                    topConnection={node.topConnection}
+                    attributes={node.attributes}
+                    methods={node.methods}
+        />
     {/each}
 
     <svg xmlns="http://www.w3.org/2000/svg" preserveAspectRatio='xMidYMid meet' viewBox='0 0 {app.rendererWidth} {app.rendererHeight}' id='connection-overlay'>
         <!-- bug where line scale does not refreshn on window resize -->
 
-        
-        {#each connectionData as connection, i}
+        {#each parsedConnections as connection}
                <LumaConnection 
-                    rootX={renderedNodes[connection[0]].dataset.x}
-                    rootY={renderedNodes[connection[0]].dataset.y}
-                    rootH={renderedNodes[connection[0]].dataset.h}
-                    rootW={renderedNodes[connection[0]].dataset.w}
-
-                    targetX={renderedNodes[connection[1]].dataset.x}
-                    targetY={renderedNodes[connection[1]].dataset.y}
-                    targetH={renderedNodes[connection[1]].dataset.h}
-                    targetW={renderedNodes[connection[1]].dataset.w}
+                    rootName={connection.rootName}
+                    targetName={connection.targetName}
+                    rootX={connection.rootX}
+                    rootY={connection.rootY}
+                    targetX={connection.targetX}
+                    targetY={connection.targetY}
                 />
         {/each}
 
     </svg>
 
-    <button aria-label="zoom out" id='luma-zoom-out' onmousedown={zoomOut}>-</button>
-    <button aria-label="zoom in" id='luma-zoom-in' onmousedown={zoomIn}>+</button>
-    <button aria-label="reset the renderer view to origin (0,0)" id='luma-reset-view' onmousedown={resetViewport}>Reset</button>
+    <div id='viewport-buttons'>
+        <button aria-label="zoom out" id='luma-zoom-out' onmousedown={zoomOut}>-</button>
+        <button aria-label="zoom in" id='luma-zoom-in' onmousedown={zoomIn}>+</button>
+        <button aria-label="reset the renderer view to origin (0,0)" id='luma-reset-view' onmousedown={resetViewport}>Reset</button>
+    </div>
 
     {#if debug}
         <div id='luma-debug'>
